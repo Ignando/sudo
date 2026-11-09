@@ -1,0 +1,29 @@
+node_modules/
+dist/
+coverage/
+*.local
+.DS_Store
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Local PostgreSQL data and database backups
+pgdata/
+postgres-data/
+postgres_data/
+database/data/
+database/backups/
+*.dump
+*.backup
+*.bak
+*.sql.gz
+*.sql.zip
+
+# Package manager and application logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
