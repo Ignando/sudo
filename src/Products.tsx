@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import ProductTable from './ProductTable'
-import { categories, products } from './productData'
-import type { ProductSort } from './productData'
+import type { Product, ProductSort } from './productData'
 import './Products.css'
 
 const pageSize = 10
@@ -12,6 +11,10 @@ export default function Products() {
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState<ProductSort>('id')
   const [page, setPage] = useState(1)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const previousTitle = document.title
@@ -20,6 +23,32 @@ export default function Products() {
     return () => { document.title = previousTitle }
   }, [])
 
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function loadProducts() {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await fetch('/api/products', { signal: controller.signal })
+        if (!response.ok) throw new Error('Unable to load products from the database.')
+        const data = await response.json() as Product[]
+        setProducts(data)
+      } catch (loadError) {
+        if (controller.signal.aborted) return
+        setError(loadError instanceof Error ? loadError.message : 'Unable to load products.')
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }
+
+    void loadProducts()
+    return () => controller.abort()
+  }, [retryCount])
+
+  const categories = [...new Set(products.map((product) => product.category))]
+    .sort((a, b) => a.localeCompare(b))
   const query = search.trim().toLowerCase()
   const filteredProducts = products.filter((product) => (
     (product.name.toLowerCase().includes(query) || product.sku.toLowerCase().includes(query))
@@ -56,6 +85,8 @@ export default function Products() {
           <nav aria-label="Main navigation" className="inventory-nav">
             <NavLink to="/" end>Home</NavLink>
             <NavLink to="/products">Products</NavLink>
+            <NavLink to="/dashboard">Dashboard</NavLink>
+            <NavLink to="/inventory">Inventory</NavLink>
           </nav>
           <span className="inventory-header-note">HARDWARE / PRODUCT RECORDS</span>
         </div>
@@ -72,7 +103,7 @@ export default function Products() {
         </div>
 
         <section className="inventory-records" aria-labelledby="records-title">
-          <div className="inventory-records-heading"><h2 id="records-title">Product records <span>{products.length}</span></h2><p>All prices in ZAR</p></div>
+          <div className="inventory-records-heading"><h2 id="records-title">Product records <span>{loading ? '…' : products.length}</span></h2><p>All prices in ZAR</p></div>
           <div className="inventory-toolbar">
             <div className="inventory-field inventory-search">
               <label htmlFor="product-search">Search products</label>
@@ -97,20 +128,23 @@ export default function Products() {
             </div>
           </div>
           <div className="inventory-results">
-            <p role="status">{filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}{hasFilters ? ' matching filters' : ' available'} <span>· {products.length} total products</span></p>
-            {hasFilters && <button type="button" className="inventory-clear" onClick={clearFilters}>Clear filters</button>}
+            <p role="status">{loading ? 'Loading products from the database…' : error ?? `${filteredProducts.length} ${filteredProducts.length === 1 ? 'product' : 'products'}${hasFilters ? ' matching filters' : ' available'} · ${products.length} total products`}</p>
+            {error && <button type="button" className="inventory-clear" onClick={() => setRetryCount((count) => count + 1)}>Retry</button>}
+            {!loading && !error && hasFilters && <button type="button" className="inventory-clear" onClick={clearFilters}>Clear filters</button>}
           </div>
-          <ProductTable products={visibleProducts} sort={sort} />
-          <div className="inventory-pagination">
+          {loading || error
+            ? <div className="inventory-load-state">{loading ? 'Loading product records…' : 'The product table could not be loaded.'}</div>
+            : <ProductTable products={visibleProducts} sort={sort} />}
+          {!loading && !error && <div className="inventory-pagination">
             <p>Showing <strong>{filteredProducts.length === 0 ? 0 : start + 1}–{Math.min(start + pageSize, filteredProducts.length)}</strong> of <strong>{filteredProducts.length}</strong> products</p>
             <nav aria-label="Product pagination">
               <button type="button" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</button>
               <span aria-live="polite">Page {page} of {pageCount}</span>
               <button type="button" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))}>Next</button>
             </nav>
-          </div>
+          </div>}
         </section>
-        <p className="inventory-disclaimer">Sample records for demonstration only. Prices and stock availability are illustrative; changes cannot be saved.</p>
+        <p className="inventory-disclaimer">Products and prices are loaded from your local database. Stock status is based on quantity on hand and the inventory reorder level.</p>
       </main>
       <footer className="inventory-container inventory-footer"><span>© {new Date().getFullYear()} Sudo</span><span>Computer hardware & technology components</span></footer>
     </div>

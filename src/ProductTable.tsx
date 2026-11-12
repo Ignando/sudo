@@ -5,6 +5,7 @@ const stockClasses: Record<StockStatus, string> = {
   'In Stock': 'stock-label--available',
   'Low Stock': 'stock-label--low',
   'Out of Stock': 'stock-label--unavailable',
+  'Not Tracked': 'stock-label--unknown',
 }
 
 export default function ProductTable({ products, sort }: { products: Product[]; sort: ProductSort }) {

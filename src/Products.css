@@ -72,7 +72,9 @@
 .inventory-page .stock-label::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .inventory-page .stock-label--available { background: #252f1d; border-color: #455337; color: var(--accent); }
 .inventory-page .stock-label--low { background: #2b291d; border-color: #514b32; color: #c0ac6d; }
-.inventory-page .stock-label--unavailable { background: var(--inventory-raised); border-color: var(--border); color: var(--muted); }
+.inventory-page .stock-label--unavailable,
+.inventory-page .stock-label--unknown { background: var(--inventory-raised); border-color: var(--border); color: var(--muted); }
+.inventory-load-state { padding: 65px 24px; border-top: 1px solid var(--border); color: var(--muted); text-align: center; }
 .inventory-table .inventory-empty { padding: 65px 24px; text-align: center; }
 .inventory-empty strong { display: block; font-size: 15px; font-weight: 500; margin-bottom: 8px; }
 .inventory-empty span { color: var(--muted); }
@@ -112,4 +114,9 @@
   .inventory-pagination { align-items: flex-start; flex-direction: column; gap: 12px; padding: 16px; }
   .inventory-pagination nav { width: 100%; justify-content: space-between; gap: 8px; }
   .inventory-footer { flex-direction: column; gap: 5px; }
+}
+
+@media (max-width: 380px) {
+  .inventory-header-inner { gap: 8px; }
+  .inventory-nav { gap: 6px; font-size: 10px; }
 }
