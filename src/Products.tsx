@@ -84,9 +84,10 @@ export default function Products() {
           <Link className="inventory-logo" to="/" aria-label="Sudo home">sudo<span>.</span></Link>
           <nav aria-label="Main navigation" className="inventory-nav">
             <NavLink to="/" end>Home</NavLink>
-            <NavLink to="/products">Products</NavLink>
             <NavLink to="/dashboard">Dashboard</NavLink>
+            <NavLink to="/products">Products</NavLink>
             <NavLink to="/inventory">Inventory</NavLink>
+            <NavLink to="/sales">Sales</NavLink>
           </nav>
           <span className="inventory-header-note">HARDWARE / PRODUCT RECORDS</span>
         </div>
@@ -144,7 +145,7 @@ export default function Products() {
             </nav>
           </div>}
         </section>
-        <p className="inventory-disclaimer">Products and prices are loaded from your local database. Stock status is based on quantity on hand and the inventory reorder level.</p>
+        <p className="inventory-disclaimer">Products and prices are loaded from local database. Stock status is based on quantity on hand and the inventory reorder level.</p>
       </main>
       <footer className="inventory-container inventory-footer"><span>© {new Date().getFullYear()} Sudo</span><span>Computer hardware & technology components</span></footer>
     </div>

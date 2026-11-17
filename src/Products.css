@@ -97,9 +97,9 @@
 
 @media (max-width: 600px) {
   .inventory-page .inventory-container { width: calc(100% - 32px); }
-  .inventory-header-inner { gap: 30px; min-height: 82px; }
+  .inventory-header-inner { flex-wrap: wrap; gap: 4px 18px; min-height: 82px; padding-block: 10px; }
   .inventory-logo { font-size: 27px; }
-  .inventory-nav { gap: 24px; font-size: 12px; }
+  .inventory-nav { order: 2; flex: 1 0 100%; min-height: 30px; justify-content: space-between; gap: 12px; font-size: 11px; }
   .inventory-main { padding-block: 24px 35px; }
   .inventory-breadcrumb { margin-bottom: 24px; }
   .inventory-heading { align-items: flex-start; flex-direction: column; gap: 20px; margin-bottom: 25px; }

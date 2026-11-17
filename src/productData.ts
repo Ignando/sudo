@@ -9,6 +9,7 @@ export interface Product {
   category: string
   price: number
   stockStatus: StockStatus
+  quantityOnHand?: number | null
 }
 
 

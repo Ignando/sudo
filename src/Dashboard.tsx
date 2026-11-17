@@ -147,9 +147,10 @@ export default function Dashboard() {
           <Link className="inventory-logo" to="/" aria-label="Sudo home">sudo<span>.</span></Link>
           <nav aria-label="Main navigation" className="inventory-nav">
             <NavLink to="/" end>Home</NavLink>
-            <NavLink to="/products">Products</NavLink>
             <NavLink to="/dashboard">Dashboard</NavLink>
+            <NavLink to="/products">Products</NavLink>
             <NavLink to="/inventory">Inventory</NavLink>
+            <NavLink to="/sales">Sales</NavLink>
           </nav>
           <span className="inventory-header-note">SUDO / OVERVIEW</span>
         </div>

@@ -1,6 +1,6 @@
 # Sudo
 
-A fictional computer hardware store built with React, TypeScript, Vite, Express, and PostgreSQL. The homepage is at `/`, the product records table is at `/products`, a database-backed dashboard is at `/dashboard`, and the inventory page is at `/inventory`. The Products and Inventory pages read records from the local PostgreSQL database through the Express API. Inventory actions remain read-only until write endpoints are implemented. The homepage is still a frontend-only concept; there is no checkout, cart, authentication, or product editing.
+A fictional computer hardware store built with React, TypeScript, Vite, Express, and PostgreSQL. The homepage is at `/`, the product records table is at `/products`, a database-backed dashboard is at `/dashboard`, the inventory page is at `/inventory`, and the point-of-sale page is at `/sales`. The Products, Inventory, and Sales pages use the local PostgreSQL database through the Express API. Inventory adjustments remain read-only; sales are recorded after an employee confirms payment was received outside the app. The homepage is still a frontend-only concept; there is no payment gateway, authentication, or product editing.
 
 ## Requirements
 
@@ -40,11 +40,12 @@ The frontend build checks TypeScript and outputs the static site to `dist/`. The
 - `src/index.css` — original homepage theme, layout, and mobile styles.
 - `src/Products.tsx` — database-backed product search, category filtering, sorting, and pagination.
 - `src/Dashboard.tsx`, `src/Dashboard.css` — database-backed dashboard metrics, sales chart, and recent activity.
-- `src/Inventory.tsx`, `src/Inventory.css` — database-backed inventory levels and recent stock movement history; write actions are UI-only.
+- `src/Inventory.tsx`, `src/Inventory.css` — database-backed inventory levels and recent stock movement history; manual adjustments are UI-only.
+- `src/Sales.tsx`, `src/Sales.css` — point-of-sale product search, cart, payment confirmation, and sale recording.
 - `src/ProductTable.tsx` — reusable, accessible product records table.
 - `src/productData.ts` — frontend product types and rand formatting.
 - `src/Products.css` — product table styling and mobile layout.
-- `backend/src/server.ts` — Express health-check, products, inventory, stock movement, and dashboard API endpoints.
+- `backend/src/server.ts` — Express health-check, products, customers, sales, inventory, stock movement, and dashboard API endpoints.
 - `backend/src/db.ts` — PostgreSQL connection pool.
 - `vite.config.ts` — local `/api` proxy to the backend.
 - `src/main.tsx` — React entry point and routes.
@@ -62,10 +63,14 @@ The Add Product button is intentionally disabled: product creation and editing a
 
 ## Inventory
 
-Visit `/inventory` to view product stock levels and the latest 50 stock movements. Inventory status is derived from quantity on hand and reorder level; products without an inventory row are shown as `Not Tracked`. The receive, adjust, damage, and return buttons remain disabled. Automatic stock updates after sales are not implemented yet. The inventory endpoints expect the unquoted PostgreSQL table names `product`, `category`, `inventory`, and `stockmovement`.
+Visit `/inventory` to view product stock levels and the latest 50 stock movements. Inventory status is derived from quantity on hand and reorder level; products without an inventory row are shown as `Not Tracked`. The receive, adjust, damage, and return buttons remain disabled. Completed sales decrease stock and create stock movement records. The inventory endpoints expect the unquoted PostgreSQL table names `product`, `category`, `inventory`, and `stockmovement`.
 
 ## Dashboard
 
 Visit `/dashboard` for database-backed product, inventory, sales, low-stock, order, and stock movement summaries. Total sales and the six-month chart include `Completed` orders only; sales are calculated from order item quantity multiplied by unit price. Recent orders and recent stock movements show the latest five records.
+
+## Sales
+
+Visit `/sales` to search available products, build a cart, choose a customer, and review the total. There is no payment gateway: staff must confirm payment has already been received before recording a sale. The backend then records a `Completed` order and order items, reduces inventory, and logs a negative `Sale` stock movement in one database transaction. The local sales endpoint is unauthenticated and must not be exposed publicly until authentication and authorization are added.
 
 For deployment, configure the static host to serve `index.html` for frontend routes such as `/products`, so direct links and refreshes work. Vite handles this locally.
