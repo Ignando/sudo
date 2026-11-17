@@ -2,7 +2,7 @@
 
 A fictional computer hardware store built with React, TypeScript, Vite, Express, and PostgreSQL. The homepage is at `/`, the product records table is at `/products`, the dashboard is at `/dashboard`, inventory is at `/inventory`, point of sale is at `/sales`, and supplier purchasing is at `/suppliers`. Products, Inventory, Sales, and Dashboard use the local PostgreSQL database through the Express API. Supplier records, catalogues, and purchase orders currently use a frontend mock data layer. Inventory adjustments remain read-only; sales are recorded after an employee confirms payment was received outside the app. The homepage is still a frontend-only concept; there is no payment gateway, authentication, or product editing.
 
-## Requirements
+## Requirementss
 
 Node.js 22.12+ (or a newer supported LTS release) and npm.
 
