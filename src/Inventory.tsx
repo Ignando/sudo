@@ -10,6 +10,7 @@ interface InventoryRecord {
   sku: string
   product: string
   category: string
+  brand: string
   quantityOnHand: number | null
   reorderLevel: number | null
   status: StockStatus
@@ -45,9 +46,15 @@ function formatMovementDate(value: string) {
   return new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
 }
 
+type InventorySort = 'id' | 'name-asc' | 'name-desc'
+
 export default function Inventory() {
   const [inventory, setInventory] = useState<InventoryRecord[]>([])
   const [movements, setMovements] = useState<StockMovement[]>([])
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('all')
+  const [brand, setBrand] = useState('all')
+  const [sort, setSort] = useState<InventorySort>('id')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
@@ -67,19 +74,22 @@ export default function Inventory() {
       setError(null)
 
       try {
-        const [inventoryResponse, movementsResponse] = await Promise.all([
+        const [inventoryResponse, movementsResponse, productsResponse] = await Promise.all([
           fetch('/api/inventory', { signal: controller.signal }),
           fetch('/api/inventory/movements', { signal: controller.signal }),
+          fetch('/api/products', { signal: controller.signal }),
         ])
-        if (!inventoryResponse.ok || !movementsResponse.ok) {
+        if (!inventoryResponse.ok || !movementsResponse.ok || !productsResponse.ok) {
           throw new Error('Unable to load inventory data from the database.')
         }
 
-        const [inventoryRows, movementRows] = await Promise.all([
+        const [inventoryRows, movementRows, productRows] = await Promise.all([
           inventoryResponse.json() as Promise<InventoryRecord[]>,
           movementsResponse.json() as Promise<StockMovement[]>,
+          productsResponse.json() as Promise<{ id: number; brand: string }[]>,
         ])
-        setInventory(inventoryRows)
+        const brandByProductId = new Map(productRows.map((product) => [product.id, product.brand]))
+        setInventory(inventoryRows.map((item) => ({ ...item, brand: brandByProductId.get(item.id) ?? '' })))
         setMovements(movementRows)
       } catch (loadError) {
         if (controller.signal.aborted) return
@@ -104,6 +114,28 @@ export default function Inventory() {
     ? inventory.filter((item) => item.status === 'Out of Stock').length.toLocaleString('en-ZA')
     : '—'
   const movementCount = loading || error ? '—' : movements.length.toLocaleString('en-ZA')
+  const categories = [...new Set(inventory.map((item) => item.category))].sort((a, b) => a.localeCompare(b))
+  const brands = [...new Set(inventory.map((item) => item.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  const query = search.trim().toLowerCase()
+  const filteredInventory = inventory.filter((item) => (
+    (item.product.toLowerCase().includes(query) || item.sku.toLowerCase().includes(query))
+    && (category === 'all' || item.category === category)
+    && (brand === 'all' || item.brand === brand)
+  ))
+  filteredInventory.sort((a, b) => {
+    switch (sort) {
+      case 'name-asc': return a.product.localeCompare(b.product)
+      case 'name-desc': return b.product.localeCompare(a.product)
+      default: return a.id - b.id
+    }
+  })
+  const hasFilters = search !== '' || category !== 'all' || brand !== 'all'
+
+  function clearFilters() {
+    setSearch('')
+    setCategory('all')
+    setBrand('all')
+  }
 
   return (
     <div className="inventory-page stock-page">
@@ -117,6 +149,7 @@ export default function Inventory() {
             <NavLink to="/products">Products</NavLink>
             <NavLink to="/inventory">Inventory</NavLink>
             <NavLink to="/sales">Sales</NavLink>
+            <NavLink to="/suppliers">Suppliers</NavLink>
           </nav>
           <span className="inventory-header-note">SUDO / STOCK CONTROL</span>
         </div>
@@ -146,15 +179,48 @@ export default function Inventory() {
 
         <section className="stock-records-panel" aria-labelledby="stock-records-title">
           <div className="stock-panel-heading"><div><p className="inventory-eyebrow">CURRENT STOCK</p><h2 id="stock-records-title">Inventory levels</h2></div><span>Stock status is based on quantity on hand and reorder level.</span></div>
+          <div className="inventory-toolbar inventory-filter-toolbar">
+            <div className="inventory-field inventory-search">
+              <label htmlFor="inventory-search">Search inventory</label>
+              <input id="inventory-search" type="search" placeholder="Search by product name or SKU…" value={search} onChange={(event) => setSearch(event.target.value)} disabled={loading || Boolean(error)} />
+            </div>
+            <div className="inventory-field">
+              <label htmlFor="inventory-category">Category</label>
+              <select id="inventory-category" value={category} onChange={(event) => setCategory(event.target.value)} disabled={loading || Boolean(error)}>
+                <option value="all">All categories</option>
+                {categories.map((name) => <option key={name} value={name}>{name}</option>)}
+              </select>
+            </div>
+            <div className="inventory-field">
+              <label htmlFor="inventory-brand">Brand</label>
+              <select id="inventory-brand" value={brand} onChange={(event) => setBrand(event.target.value)} disabled={loading || Boolean(error)}>
+                <option value="all">All brands</option>
+                {brands.map((name) => <option key={name} value={name}>{name}</option>)}
+              </select>
+            </div>
+            <div className="inventory-field">
+              <label htmlFor="inventory-sort">Sort by</label>
+              <select id="inventory-sort" value={sort} onChange={(event) => setSort(event.target.value as InventorySort)} disabled={loading || Boolean(error)}>
+                <option value="id">Product ID</option>
+                <option value="name-asc">Product name: A–Z</option>
+                <option value="name-desc">Product name: Z–A</option>
+              </select>
+            </div>
+          </div>
+          <div className="inventory-results">
+            <p role="status">{loading ? 'Loading inventory…' : error ?? `${filteredInventory.length} ${filteredInventory.length === 1 ? 'product' : 'products'}${hasFilters ? ' matching filters' : ' available'} · ${inventory.length} total products`}</p>
+            {error && <button type="button" className="inventory-clear" onClick={() => setRetryCount((count) => count + 1)}>Retry</button>}
+            {!loading && !error && hasFilters && <button type="button" className="inventory-clear" onClick={clearFilters}>Clear filters</button>}
+          </div>
           <div className="stock-table-scroll" role="region" aria-label="Inventory levels; scroll horizontally on smaller screens" tabIndex={0}>
             <table className="stock-table">
               <caption className="inventory-sr-only">Inventory levels loaded from the database.</caption>
               <thead><tr><th scope="col">Product</th><th scope="col">Quantity on hand</th><th scope="col">Reorder level</th><th scope="col">Status</th></tr></thead>
               <tbody>
                 {loading ? <tr><td colSpan={4} className="stock-empty"><strong>Loading inventory…</strong></td></tr>
-                  : error ? <tr><td colSpan={4} className="stock-empty stock-error"><strong>Could not load inventory</strong><span>{error}</span><button type="button" onClick={() => setRetryCount((count) => count + 1)}>Retry</button></td></tr>
-                    : inventory.length === 0 ? <tr><td colSpan={4} className="stock-empty"><strong>No inventory records yet</strong><span>Product stock levels will appear here when records are added to the database.</span></td></tr>
-                      : inventory.map((item) => <tr key={item.id}>
+                  : error ? <tr><td colSpan={4} className="stock-empty stock-error"><strong>Could not load inventory</strong><span>{error}</span></td></tr>
+                    : filteredInventory.length === 0 ? <tr><td colSpan={4} className="stock-empty"><strong>{inventory.length === 0 ? 'No inventory records yet' : 'No matching inventory records'}</strong><span>{inventory.length === 0 ? 'Product stock levels will appear here when records are added to the database.' : 'Try a different product name, SKU, category, or brand.'}</span></td></tr>
+                      : filteredInventory.map((item) => <tr key={item.id}>
                         <td><strong className="stock-product-name">{item.product}</strong><span className="stock-product-sku">{item.sku} · {item.category}</span></td>
                         <td>{item.quantityOnHand ?? '—'}</td>
                         <td>{item.reorderLevel ?? '—'}</td>

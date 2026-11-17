@@ -151,6 +151,7 @@ export default function Dashboard() {
             <NavLink to="/products">Products</NavLink>
             <NavLink to="/inventory">Inventory</NavLink>
             <NavLink to="/sales">Sales</NavLink>
+            <NavLink to="/suppliers">Suppliers</NavLink>
           </nav>
           <span className="inventory-header-note">SUDO / OVERVIEW</span>
         </div>

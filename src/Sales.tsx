@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { formatPrice } from './productData'
-import type { Product } from './productData'
+import type { Product, ProductSort } from './productData'
 import './Products.css'
 import './Sales.css'
 
@@ -26,6 +26,9 @@ export default function Sales() {
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('all')
+  const [brand, setBrand] = useState('all')
+  const [sort, setSort] = useState<ProductSort>('id')
   const [cart, setCart] = useState<CartLine[]>([])
   const [customerId, setCustomerId] = useState('')
   const [paymentConfirmed, setPaymentConfirmed] = useState(false)
@@ -81,10 +84,23 @@ export default function Sales() {
     return () => controller.abort()
   }, [reloadCount])
 
-  const availableProducts = products.filter((product) => {
-    const query = search.trim().toLowerCase()
-    return product.name.toLowerCase().includes(query) || product.sku.toLowerCase().includes(query)
+  const categories = [...new Set(products.map((product) => product.category))].sort((a, b) => a.localeCompare(b))
+  const brands = [...new Set(products.map((product) => product.brand))].sort((a, b) => a.localeCompare(b))
+  const query = search.trim().toLowerCase()
+  const availableProducts = products.filter((product) => (
+    (product.name.toLowerCase().includes(query) || product.sku.toLowerCase().includes(query))
+    && (category === 'all' || product.category === category)
+    && (brand === 'all' || product.brand === brand)
+  )).sort((a, b) => {
+    switch (sort) {
+      case 'name-asc': return a.name.localeCompare(b.name)
+      case 'name-desc': return b.name.localeCompare(a.name)
+      case 'price-asc': return a.price - b.price
+      case 'price-desc': return b.price - a.price
+      default: return a.id - b.id
+    }
   })
+  const hasProductFilters = query !== '' || category !== 'all' || brand !== 'all'
   const total = cart.reduce((sum, line) => {
     const product = products.find((item) => item.id === line.productId)
     return sum + (product?.price ?? 0) * line.quantity
@@ -168,6 +184,7 @@ export default function Sales() {
             <NavLink to="/products">Products</NavLink>
             <NavLink to="/inventory">Inventory</NavLink>
             <NavLink to="/sales">Sales</NavLink>
+            <NavLink to="/suppliers">Suppliers</NavLink>
           </nav>
           <span className="inventory-header-note">SUDO / POINT OF SALE</span>
         </div>
@@ -197,6 +214,32 @@ export default function Sales() {
               <label htmlFor="sales-product-search">Search by product name or SKU</label>
               <input id="sales-product-search" type="search" placeholder="e.g. RTX 4070 or GPU-001" value={search} onChange={(event) => setSearch(event.target.value)} disabled={loading || Boolean(loadError)} />
             </div>
+            <div className="sales-filter-row">
+              <div className="sales-filter-field">
+                <label htmlFor="sales-product-category">Category</label>
+                <select id="sales-product-category" value={category} onChange={(event) => setCategory(event.target.value)} disabled={loading || Boolean(loadError)}>
+                  <option value="all">All categories</option>
+                  {categories.map((name) => <option key={name} value={name}>{name}</option>)}
+                </select>
+              </div>
+              <div className="sales-filter-field">
+                <label htmlFor="sales-product-brand">Brand</label>
+                <select id="sales-product-brand" value={brand} onChange={(event) => setBrand(event.target.value)} disabled={loading || Boolean(loadError)}>
+                  <option value="all">All brands</option>
+                  {brands.map((name) => <option key={name} value={name}>{name}</option>)}
+                </select>
+              </div>
+              <div className="sales-filter-field">
+                <label htmlFor="sales-product-sort">Sort by</label>
+                <select id="sales-product-sort" value={sort} onChange={(event) => setSort(event.target.value as ProductSort)} disabled={loading || Boolean(loadError)}>
+                  <option value="id">Product ID</option>
+                  <option value="name-asc">Product name: A–Z</option>
+                  <option value="name-desc">Product name: Z–A</option>
+                  <option value="price-asc">Price: low to high</option>
+                  <option value="price-desc">Price: high to low</option>
+                </select>
+              </div>
+            </div>
             <div className="sales-table-scroll">
               <table className="sales-product-table">
                 <thead><tr><th scope="col">Product</th><th scope="col">Available</th><th scope="col">Unit price</th><th scope="col">Action</th></tr></thead>
@@ -214,7 +257,7 @@ export default function Sales() {
                           <td><button type="button" className="sales-add-button" disabled={!canAdd || loading || submitting} onClick={() => addProduct(product)}>{available === 0 ? 'Unavailable' : inCart ? `Add (${inCart})` : 'Add'}</button></td>
                         </tr>
                       })
-                        : <tr><td colSpan={4} className="sales-empty">{search ? 'No matching products.' : 'No products available.'}</td></tr>}
+                        : <tr><td colSpan={4} className="sales-empty">{hasProductFilters ? 'No matching products.' : 'No products available.'}</td></tr>}
                 </tbody>
               </table>
             </div>

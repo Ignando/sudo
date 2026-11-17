@@ -9,6 +9,7 @@ const pageSize = 10
 export default function Products() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
+  const [brand, setBrand] = useState('all')
   const [sort, setSort] = useState<ProductSort>('id')
   const [page, setPage] = useState(1)
   const [products, setProducts] = useState<Product[]>([])
@@ -49,10 +50,13 @@ export default function Products() {
 
   const categories = [...new Set(products.map((product) => product.category))]
     .sort((a, b) => a.localeCompare(b))
+  const brands = [...new Set(products.map((product) => product.brand))]
+    .sort((a, b) => a.localeCompare(b))
   const query = search.trim().toLowerCase()
   const filteredProducts = products.filter((product) => (
     (product.name.toLowerCase().includes(query) || product.sku.toLowerCase().includes(query))
     && (category === 'all' || product.category === category)
+    && (brand === 'all' || product.brand === brand)
   ))
 
   filteredProducts.sort((a, b) => {
@@ -68,11 +72,12 @@ export default function Products() {
   const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize))
   const start = (page - 1) * pageSize
   const visibleProducts = filteredProducts.slice(start, start + pageSize)
-  const hasFilters = search !== '' || category !== 'all'
+  const hasFilters = search !== '' || category !== 'all' || brand !== 'all'
 
   function clearFilters() {
     setSearch('')
     setCategory('all')
+    setBrand('all')
     setPage(1)
   }
 
@@ -88,6 +93,7 @@ export default function Products() {
             <NavLink to="/products">Products</NavLink>
             <NavLink to="/inventory">Inventory</NavLink>
             <NavLink to="/sales">Sales</NavLink>
+            <NavLink to="/suppliers">Suppliers</NavLink>
           </nav>
           <span className="inventory-header-note">HARDWARE / PRODUCT RECORDS</span>
         </div>
@@ -115,6 +121,13 @@ export default function Products() {
               <select id="product-category" value={category} onChange={(event) => { setCategory(event.target.value); setPage(1) }}>
                 <option value="all">All categories</option>
                 {categories.map((name) => <option key={name} value={name}>{name}</option>)}
+              </select>
+            </div>
+            <div className="inventory-field">
+              <label htmlFor="product-brand">Brand</label>
+              <select id="product-brand" value={brand} onChange={(event) => { setBrand(event.target.value); setPage(1) }}>
+                <option value="all">All brands</option>
+                {brands.map((name) => <option key={name} value={name}>{name}</option>)}
               </select>
             </div>
             <div className="inventory-field">
