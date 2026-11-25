@@ -22,9 +22,13 @@ export async function getInventoryData(signal?: AbortSignal): Promise<InventoryD
   }
 }
 
-export async function getProductStock(_productId: number, _signal?: AbortSignal): Promise<ProductStockData> {
   // TODO: GET /api/inventory/:productId, no request body, response ProductStockData. Read product, category, inventory, and all stockmovement rows filtered by product_id; one read operation, no transaction.
   throw new Error('Not connected yet')
+  const response = await fetch(`/api/inventory/${productId}`, { signal });
+  if (!response.ok) {
+    throw new Error("Unable to load product stock data.");
+  }
+  return response.json() as Promise<ProductStockData>;
 }
 
 export async function receiveStock(_input: StockChangeInput): Promise<StockMovementRow> {
