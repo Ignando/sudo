@@ -14,9 +14,18 @@ export async function getCategories(): Promise<CategoryRow[]> {
   return await response.json() as CategoryRow[]
 }
 
-export async function createProduct(_input: NewProductInput): Promise<Product> {
-  // TODO: POST /api/products, body NewProductInput, response Product. Create product and inventory rows and an optional opening StockMovement; perform all inserts in one transaction.
-  throw new Error('Not connected yet')
+export async function createProduct(input: NewProductInput): Promise<Product> {
+const response = await fetch('/api/products', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  })
+  if (!response.ok) {
+    throw new Error('Unable to create product.')
+  }
+  return await response.json() as Product
 }
 
 export const productRealApi: ProductApi = { getProducts, getCategories, createProduct }
