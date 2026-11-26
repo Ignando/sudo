@@ -152,7 +152,7 @@ export interface InventoryData {
 }
 
 export interface InventoryProductRecord extends InventoryRecord {
-  lastUpdated: string
+  lastUpdated: string | null;
 }
 
 export interface ProductStockMovement extends StockMovement {
