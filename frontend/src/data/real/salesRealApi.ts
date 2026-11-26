@@ -19,9 +19,14 @@ export async function createSale(input: CreateSaleInput): Promise<SaleResponse> 
   return { ...result, expectedDeliveryDate: result.expectedDeliveryDate ?? dateAfterDays(3) }
 }
 
-export async function getMyOrders(_userId: number, _signal?: AbortSignal): Promise<MyOrderListRow[]> {
-  // TODO: GET /api/users/:id/orders, no request body, response MyOrderListRow[]. Read salesorder and salesorderitem with product details, filtered by user_id; this is a read operation and needs no transaction.
-  throw new Error('Not connected yet')
+export async function getMyOrders(userId: number, signal?: AbortSignal): Promise<MyOrderListRow[]> {
+  const response = await fetch(`/api/users/${userId}/orders`, { signal })
+
+  if (!response.ok) {
+    throw new Error('Unable to load your orders from the database.')
+  }
+
+  return await response.json() as MyOrderListRow[]
 }
 
 export const salesRealApi: SalesApi = { getSalesData, createSale, getMyOrders }
