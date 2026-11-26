@@ -32,4 +32,22 @@ router.get('/products', async (_request, response) => {
   }
 })
 
+router.get('/categories', async (_request, response) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        category_id,
+        category_name,
+        description
+      FROM category
+      ORDER BY category_id
+    `)
+
+    response.json(rows)
+  } catch (error) {
+    console.error('Failed to load categories:', error)
+    response.status(500).json({ error: 'Unable to load categories.' })
+  }
+})
+
 export default router

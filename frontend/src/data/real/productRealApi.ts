@@ -7,8 +7,11 @@ export async function getProducts(signal?: AbortSignal, errorMessage = 'Unable t
 }
 
 export async function getCategories(): Promise<CategoryRow[]> {
-  // TODO: GET /api/categories, no request body, response CategoryRow[]. Read the category table; this is a single-table read, so no transaction is needed.
-  throw new Error('Not connected yet')
+  const response = await fetch('/api/categories')
+  if (!response.ok) {
+    throw new Error('Unable to load categories from the database.')
+  }
+  return await response.json() as CategoryRow[]
 }
 
 export async function createProduct(_input: NewProductInput): Promise<Product> {
