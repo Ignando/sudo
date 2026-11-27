@@ -45,9 +45,19 @@ export async function receiveStock(input: StockChangeInput): Promise<StockMoveme
   return result
 }
 
-export async function adjustStock(_input: StockChangeInput): Promise<StockMovementRow> {
-  // TODO: POST /api/inventory/adjustments, body StockChangeInput, response StockMovementRow. Update Inventory and insert StockMovement in one transaction.
-  throw new Error('Not connected yet')
+export async function adjustStock(input: StockChangeInput): Promise<StockMovementRow> {
+  const response = await fetch('/api/inventory/adjustments', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  })
+  const result = await response.json() as StockMovementRow & { error?: string }
+  if (!response.ok) {
+    throw new Error(result.error ?? 'Unable to adjust stock.')
+  }
+  return result
 }
 
 export async function recordDamaged(_input: StockChangeInput): Promise<StockMovementRow> {
