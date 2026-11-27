@@ -24,6 +24,59 @@ router.get('/customers', async (_request, response) => {
   }
 })
 
+router.get('/users/:id/orders', async (request, response) => {
+  const userId = Number(request.params.id)
+
+  if (!Number.isSafeInteger(userId) || userId <= 0) {
+    response.status(400).json({ error: 'Invalid user ID.' })
+    return
+  }
+
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        salesorder.sales_order_id,
+        salesorder.user_id,
+        salesorder.order_date,
+        salesorder.order_status,
+        salesorder.expected_delivery_date,
+        order_summary.unit_count,
+        order_summary.total,
+        order_summary.items
+      FROM salesorder
+
+      LEFT JOIN LATERAL (
+        SELECT
+          COALESCE(SUM(salesorderitem.quantity), 0)::int AS unit_count,
+          COALESCE(ROUND(SUM(salesorderitem.quantity * salesorderitem.unit_price), 2), 0)::float8 AS total,
+          COALESCE(
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'product_id', product.product_id,
+                'product_name', product.product_name,
+                'sku', product.sku,
+                'quantity', salesorderitem.quantity
+              )
+              ORDER BY product.product_name
+            ),
+            '[]'::json
+          ) AS items
+        FROM salesorderitem
+        JOIN product ON product.product_id = salesorderitem.product_id
+        WHERE salesorderitem.sales_order_id = salesorder.sales_order_id
+      ) AS order_summary ON TRUE
+
+      WHERE salesorder.user_id = $1
+      ORDER BY salesorder.order_date DESC, salesorder.sales_order_id DESC
+    `, [userId])
+
+    response.json(rows)
+  } catch (error) {
+    console.error('Failed to load user orders:', error)
+    response.status(500).json({ error: 'Unable to load user orders.' })
+  }
+})
+
 router.post('/sales', async (request, response) => {
   const body = request.body as { userId?: unknown; items?: unknown }
   if (!body || !Number.isSafeInteger(body.userId) || Number(body.userId) <= 0 || !Array.isArray(body.items) || body.items.length === 0 || body.items.length > 100) {
