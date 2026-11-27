@@ -243,6 +243,94 @@ router.post('/inventory/adjustments', async (request, response) => {
   }
 })
 
+router.post('/inventory/damaged', async (request, response) => {
+  const body = request.body as {
+    product_id?: unknown
+    quantity?: unknown
+    reason?: unknown
+  }
+
+  if (
+    !body ||
+    !Number.isSafeInteger(body.product_id) ||
+    Number(body.product_id) <= 0 ||
+    !Number.isSafeInteger(body.quantity) ||
+    Number(body.quantity) <= 0 ||
+    typeof body.reason !== 'string' ||
+    !body.reason.trim()
+  ) {
+    response.status(400).json({ error: 'A valid product, positive damaged quantity and reason are required.' })
+    return
+  }
+
+  const productId = Number(body.product_id)
+  const quantity = -Number(body.quantity)
+  const reason = body.reason.trim()
+
+  const client = await pool.connect()
+  let transactionOpen = false
+
+  try {
+    await client.query('BEGIN')
+    transactionOpen = true
+
+    const inventoryResult = await client.query(`
+      UPDATE inventory
+      SET
+        quantity_on_hand = quantity_on_hand + $2,
+        last_updated = NOW()
+      WHERE product_id = $1
+        AND quantity_on_hand + $2 >= 0
+      RETURNING product_id
+    `, [productId, quantity])
+    if (inventoryResult.rowCount === 0) {
+      const productResult = await client.query(
+        'SELECT product_id FROM inventory WHERE product_id = $1',
+        [productId],
+      )
+      await client.query('ROLLBACK')
+      transactionOpen = false
+      if (productResult.rowCount === 0) {
+        response.status(404).json({ error: 'Product inventory record not found.' })
+      } else {
+        response.status(409).json({ error: 'There is not enough stock to record this damage.' })
+      }
+      return
+    }
+    const movementResult = await client.query(`
+      INSERT INTO stockmovement (
+        product_id,
+        movement_type,
+        quantity,
+        movement_date,
+        reason
+      )
+      VALUES ($1, 'Adjustment', $2, NOW(), $3)
+      RETURNING
+        movement_id,
+        product_id,
+        movement_type,
+        quantity,
+        movement_date,
+        reason,
+        purchase_order_id,
+        sales_order_id
+    `, [productId, quantity, reason])
+    await client.query('COMMIT')
+    transactionOpen = false
+
+    response.status(201).json(movementResult.rows[0])
+  } catch (error) {
+    if (transactionOpen) {
+      await client.query('ROLLBACK')
+    }
+    console.error('Failed to record damaged stock:', error)
+    response.status(500).json({ error: 'Unable to record damaged stock.' })
+  } finally {
+    client.release()
+  }
+})
+
 router.get("/inventory/:productId", async (request, response) => {
   const productId = Number(request.params.productId);
 
